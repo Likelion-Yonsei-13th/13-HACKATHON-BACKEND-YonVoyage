@@ -2,6 +2,12 @@
 
 ## 🚀 Clone 후 할 일(초기 세팅)
 
+dev 브랜치로 checkout
+
+```bash
+    checkout dev
+```
+
 ### 1. 가상환경 생성 및 실행
 
 ```bash
@@ -41,6 +47,7 @@ DB_PASSWORD=본인비번
 ### 5. 마이그레이션 적용 및 superuser 만들기(로컬용)
 
 ```bash
+cd pixpl
 python manage.py migrate
 python manage.py createsuperuser
 ```

@@ -44,12 +44,11 @@ DB_PASSWORD=본인비번
 
 운영 환경에서는 DEBUG=False로 변경
 
-### 5. 마이그레이션 적용 및 superuser 만들기(로컬용)
+### 5. 마이그레이션 적용
 
 ```bash
 cd pixpl
 python manage.py migrate
-python manage.py createsuperuser
 ```
 
 ### 6. 서버 실행

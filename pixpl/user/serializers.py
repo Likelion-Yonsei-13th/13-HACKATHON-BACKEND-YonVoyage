@@ -1,41 +1,24 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-from django.contrib.auth import authenticate
+from .models import User
 
-User = get_user_model()
 
-class UserSignupSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+class UserCheckSerializer(serializers.ModelSerializer):
+    exists = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'nickname')
+        fields = ["exists", "uuid", "nickname", "business_type"]
 
-    def create(self, validated_data):
-        user = User(
-            username = validated_data['username'],
-            nickname=validated_data.get('nickname', '')
-        )
+    def get_exists(self, obj):
+        return True
 
-        user.set_password(validated_data['password'])
-        user.save()
-        return user
-    
-class UserLoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField(write_only=True)
 
-    def validate(self, data):
-        username = data.get("username")
-        password = data.get("password")
+class UserCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["uuid", "nickname", "business_type", "is_profile_public"]
 
-        if not username or not password:
-            raise serializers.ValidationError("아이디와 비밀번호를 모두 입력해주세요.")
-        
-        user = authenticate(username = username, password=password)
-
-        if not user:
-            raise serializers.ValidationError("아이디 또는 비밀번호가 올바르지 않습니다.")
-        
-        data["user"] = user
-        return data
+    def validate_uuid(self, value):
+        if User.objects.filter(uuid=value).exists():
+            raise serializers.ValidationError("이미 존재하는 유저입니다.")
+        return value

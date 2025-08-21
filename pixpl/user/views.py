@@ -1,46 +1,45 @@
-from django.shortcuts import render
-from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-# Create your views here.
-
+from .models import User
 from .serializers import *
 
-@api_view(['POST'])
-def signup_view(request):
-    serializer = UserSignupSerializer(data=request.data)
+class UserCheckView(APIView):
+    def post(self, request, *args, **kwargs):
+        uuid = request.data.get("uuid")
 
-    if serializer.is_valid():
-        serializer.save()
-        return Response({"message": "회원가입이 완료되었습니다."}, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors)
+        if not uuid:
+            return Response(
+                {"detail": "uuid is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(uuid=uuid)
+            serializer = UserCheckSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"exists": False}, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
-def login_view(request):
-    serializer = UserLoginSerializer(data=request.data)
-
-    if serializer.is_valid():
-        user = serializer.validated_data["user"]
-
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-        refresh_token = str(refresh)
-
-        response = Response({
-            "message" : "로그인 성공"
-        }, status=status.HTTP_200_OK)
-
-        response["Authorization"] = f"Bearer {access_token}"
-
-        response.set_cookie(
-            key='refresh_token',
-            value=refresh_token,
-            httponly=True,
-            samesite='Lax',
-            secure=False
-        )
-        return response
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class UserCreateView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = UserCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(
+                {
+                    "success": True,
+                    "uuid": str(user.uuid),
+                    "nickname": user.nickname,
+                    "business_type": user.business_type,
+                    "created_at": user.created_at.isoformat()
+                },
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                {"success": False, "message": serializer.errors.get("uuid", ["등록 실패"])[0]},
+                status=status.HTTP_400_BAD_REQUEST
+            )

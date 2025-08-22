@@ -37,7 +37,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/', include('user.urls')),
-    path('api/feed/', include('feed.urls')),
+    path('api/feeds/', include('feed.urls')),
 ]
 
 # 개발 환경에서만 Swagger 노출

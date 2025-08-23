@@ -2,7 +2,7 @@ from django.db import models
 from user.models import User
 
 class UploadedImage(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    uuid = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     image = models.ImageField(upload_to='uploaded_images/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -12,7 +12,7 @@ class UploadedImage(models.Model):
         return f"UploadedImage {self.id} by Anonymous"
 
 class Prompt(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    uuid = models.ForeignKey(User, on_delete=models.CASCADE)
     content_en = models.TextField()
     content_ko = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -21,7 +21,7 @@ class Prompt(models.Model):
         return f"Prompt {self.id} by {self.user.nickname or self.user.uuid}"
 
 class GeneratedImage(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    uuid = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     uploaded_image = models.ForeignKey(UploadedImage, on_delete=models.CASCADE)
     prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE, null=True, blank=True)
     generated_image = models.ImageField(upload_to='generated_images/')

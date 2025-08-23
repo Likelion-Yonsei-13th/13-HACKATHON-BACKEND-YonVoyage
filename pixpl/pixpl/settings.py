@@ -12,19 +12,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+import os
+
+# --- .env 파일에서 설정값 불러오기 ---
+SECRET_KEY = config('SECRET_KEY')
 DEBUG = config("DEBUG", default=False, cast=bool)
+API_KEY = config('API_KEY')
+# ------------------------------------
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-%7a63$r2d_^y2iywz2h84-b7xcd8y$v+fan28man5^4t-_lycs"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     'rest_framework',
     'drf_yasg',
+    'corsheaders',
     'user',
     'feed',
     'studio',
@@ -48,12 +51,18 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# --- CORS 설정 ---
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+# ------------------
 
 ROOT_URLCONF = "pixpl.urls"
 
@@ -81,11 +90,11 @@ WSGI_APPLICATION = "pixpl.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pixpl_db',          # DB 이름
-        'USER': 'root',  # MySQL 아이디
-        'PASSWORD': config('DB_PASSWORD'),  # MySQL 비밀번호
-        'HOST': 'localhost',            # RDS나 다른 서버면 IP
-        'PORT': '3306',                 # MySQL 기본 포트
+        'NAME': 'pixpl_db',
+        'USER': 'root',
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': 'localhost',
+        'PORT': '3306',
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET NAMES 'utf8mb4'"
@@ -93,6 +102,9 @@ DATABASES = {
     }
 }
 
+# --- 커스텀 유저 모델 설정 ---
+# AUTH_USER_MODEL = 'user.User'
+# ---------------------------
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -116,9 +128,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ko-kr"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Seoul"
 
 USE_I18N = True
 
@@ -134,3 +146,8 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- 미디어 파일(사용자 업로드 파일) 설정 ---
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# -----------------------------------------

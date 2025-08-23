@@ -1,19 +1,17 @@
 from django.db import models
-from user.models import *
+from user.models import User
 
-# Create your models here.
 class UploadedImage(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    image_url = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    image = models.ImageField(upload_to='uploaded_images/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"UploadedImage {self.id} by {self.uuid.nickname or self.uuid.uuid}"
-
+        if self.user:
+            return f"UploadedImage {self.id} by {self.user.nickname or self.user.uuid}"
+        return f"UploadedImage {self.id} by Anonymous"
 
 class Prompt(models.Model):
-    id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content_en = models.TextField()
     content_ko = models.TextField()
@@ -22,14 +20,14 @@ class Prompt(models.Model):
     def __str__(self):
         return f"Prompt {self.id} by {self.user.nickname or self.user.uuid}"
 
-
 class GeneratedImage(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    image_url = models.CharField(max_length=255)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     uploaded_image = models.ForeignKey(UploadedImage, on_delete=models.CASCADE)
-    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
+    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE, null=True, blank=True)
+    generated_image = models.ImageField(upload_to='generated_images/')
     generated_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"GeneratedImage {self.id} by {self.uuid.nickname or self.uuid.uuid}"
+        if self.user:
+            return f"GeneratedImage {self.id} by {self.user.nickname or self.user.uuid}"
+        return f"GeneratedImage {self.id} by Anonymous"

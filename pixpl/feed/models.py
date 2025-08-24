@@ -9,7 +9,7 @@ from studio.models import *
 class Feed(models.Model):
     id = models.BigAutoField(primary_key=True)
     uuid = models.ForeignKey(User, on_delete=models.CASCADE)
-    generated_image = models.ForeignKey(GeneratedImage, on_delete=models.CASCADE,unique=True)
+    generated_image = models.OneToOneField(GeneratedImage, on_delete=models.CASCADE)
     uploaded_image = models.ForeignKey(UploadedImage, on_delete=models.CASCADE)
     prompt = models.ForeignKey(Prompt, on_delete=models.SET_NULL, null=True, blank=True)
     business_type = models.CharField(max_length=30)

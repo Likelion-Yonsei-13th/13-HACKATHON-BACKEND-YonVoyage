@@ -38,6 +38,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/', include('user.urls')),
     path('api/feeds/', include('feed.urls')),
+    path('api/studio/', include('studio.urls')),
 ]
 
 # 개발 환경에서만 Swagger 노출

@@ -28,6 +28,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
 ALLOWED_HOSTS = []
 
 
@@ -90,11 +93,11 @@ WSGI_APPLICATION = "pixpl.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pixpl_db',
-        'USER': 'root',
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': 'pixpl_db',          # DB 이름
+        'USER': 'root',  # MySQL 아이디
+        'PASSWORD': config('DB_PASSWORD'),  # MySQL 비밀번호
+        'HOST': 'localhost',            # RDS나 다른 서버면 IP
+        'PORT': '3306',                 # MySQL 기본 포트
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET NAMES 'utf8mb4'"
@@ -102,9 +105,6 @@ DATABASES = {
     }
 }
 
-# --- 커스텀 유저 모델 설정 ---
-# AUTH_USER_MODEL = 'user.User'
-# ---------------------------
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -128,9 +128,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "ko-kr"
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "Asia/Seoul"
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 

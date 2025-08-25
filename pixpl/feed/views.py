@@ -1,3 +1,4 @@
+from django.forms import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -103,9 +104,8 @@ class FeedDetailView(APIView):
         if user_uuid:
             try:
                 user = User.objects.get(uuid=user_uuid)
-            except User.DoesNotExist:
-                return Response({"error": "해당 유저가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
-
+            except (User.DoesNotExist, ValidationError):
+                user = None
         feed = get_object_or_404(
             Feed.objects.select_related(
                 'uuid','generated_image','uploaded_image','prompt').prefetch_related('picks'), id=feed_id)

@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -43,3 +44,13 @@ class UserCreateView(APIView):
                 {"success": False, "message": serializer.errors.get("uuid", ["등록 실패"])[0]},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class ProfileView(APIView):
+    def get(self, request):
+        user_uuid = request.headers.get('X-User-UUID')
+        if not user_uuid:
+            return Response({'error': 'X-User-UUID 헤더가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(User, uuid=user_uuid)
+        serializer = ProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)

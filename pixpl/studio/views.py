@@ -43,14 +43,13 @@ class ImageUploadView(APIView):
 class ImageGenerateView(APIView):
     permission_classes = [permissions.AllowAny]
     
-    BASE_PROMPT = "You are a professional food photography assistant AI. Your goal is to subtly enhance a user-submitted food image by combining enhancement keywords based on the user's selection. Core Principles: 1. Preserve the Original: Maintain the core identity and ingredients of the original dish. 2. Enhance, Don't Replace: Focus on photorealistic improvements to image. 3. Photorealism is Key: The final image must be high-resolution, sharp, and look like it was captured with a professional DSLR camera."
-    NEGATIVE_PROMPT = "grid, collage, multiple images, multiple dishes, different food, text, watermark, blurry. Do not change the food item or its composition."
+    BASE_PROMPT = "You are an expert food stylist and professional photographer. Your mission is to subtly enhance the user's uploaded food image, transforming it into a visually stunning, appetizing, and high-quality masterpiece as if for a gourmet magazine. You must strictly preserve the original dish's core ingredients and identity. Focus on improving plating details to make the food the undeniable hero of the image. Create a single, complete image that is not divided into multiple parts. The final image must be high-resolution, sharp, and look like it was captured with a professional DSLR camera. Do not drastically change the food itself."
     USER_PROMPT_PREFIX = BASE_PROMPT + "The desired style is: "
     
     PROMPT_PARTS = {
-        "basic": "(masterpiece, best quality, ultra-realistic), (bright and airy mood:1.2), (warm, soft golden hour lighting:1.3), vibrant natural colors, fresh ingredients, clean highlights, subtle contrast.",
-        "composition": "(masterpiece, best quality), (professional chef's plating:1.4), artistic food arrangement, (balanced composition on the plate:1.3), intentional use of negative space, delicate garnishes.",
-        "concept": "(masterpiece, best quality), (culinary storytelling:1.4), analyze the food's inherent concept and (amplify its unique story:1.3), enhance its characteristic textures and colors, food-complementary background."
+        "basic": "Enhancing with vibrant, rich colors and warm, natural lighting. Adjust for perfect exposure, making the food look exceptionally fresh and mouth-watering.",
+        "composition": "Refining the composition with a professional food photography angle (e.g., top-down, 45-degree). Create a clear focus on the main dish with a soft, natural depth of field (bokeh), set against a clean, complementary background..",
+        "concept": "Analyzing the dish's inherent concept (e.g., rustic, modern, elegant) and amplifying it. Elevate the plating with subtle, thematic elements that complement the food's identity."
     }
 
     def post(self, request, *args, **kwargs):
@@ -115,12 +114,7 @@ class ImageGenerateView(APIView):
         try:
             with uploaded_image_instance.image.open('rb') as image_file:
                 files = {"image": image_file}
-                data = {
-                    "prompt": prompt_to_use,
-                    "negative_prompt": self.NEGATIVE_PROMPT,
-                    "control_strength": 0.7,
-                    "output_format": "png"
-                }
+                data = {"prompt": prompt_to_use, "output_format": "png"}
                 response = requests.post(api_url, headers=headers, files=files, data=data)
                 response.raise_for_status()
             

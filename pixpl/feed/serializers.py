@@ -36,31 +36,19 @@ class FeedDetailSerializer(serializers.ModelSerializer):
     def get_nickname(self, obj):
         return obj.uuid.nickname
 
-    def _build_image_url(self, img_field):
-        """ImageField에서 안전하게 URL 반환"""
-        request = self.context.get('request')
-        if img_field:
-            try:
-                # FileField인지 체크
-                url = img_field.url if hasattr(img_field, 'url') else str(img_field)
-                # request가 있으면 절대 URL
-                if request:
-                    return request.build_absolute_uri(url)
-                return url
-            except ValueError:
-                # 파일이 존재하지 않으면 None
-                return None
-        return None
-
+    # === 수정된 부분 ===
     def get_image_url(self, obj):
         if obj.generated_image:
-            return self._build_image_url(obj.generated_image.generated_image)
+            # S3 URL 그대로 반환
+            return str(obj.generated_image.generated_image)
         return None
 
     def get_before_image_url(self, obj):
         if obj.uploaded_image:
-            return self._build_image_url(obj.uploaded_image.image)
+            # S3 URL 그대로 반환
+            return str(obj.uploaded_image.image)
         return None
+    # =================
 
     def get_prompt(self, obj):
         return obj.prompt.content_ko if obj.prompt else None

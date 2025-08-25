@@ -17,16 +17,22 @@ from user.models import User
 
 from django.shortcuts import get_object_or_404
 
+from django.core.files.storage import default_storage
+
 class ImageUploadView(APIView):
     permission_classes = [permissions.AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
+
+        print("--- DEBUG START ---")
+        print(f"현재 적용된 파일 스토리지: {settings.DEFAULT_FILE_STORAGE}")
+        print(f"현재 사용되는 스토리지 클래스: {default_storage.__class__}")
+        print("--- DEBUG END ---")
         uuid_str = request.data.get('uuid')
         user_instance = None
 
         if uuid_str:
-            # <<< 수정: .get() 대신 .get_or_create()를 사용하여 신규 유저를 자동 생성합니다.
             user_instance, created = User.objects.get_or_create(
                 uuid=uuid_str,
                 defaults={'nickname': f'user_{uuid_str[:8]}'}
@@ -34,7 +40,6 @@ class ImageUploadView(APIView):
         
         serializer = UploadedImageSerializer(data=request.data)
         if serializer.is_valid():
-            # 모델의 필드명이 'uuid'이므로, serializer.save에도 'uuid'를 전달합니다.
             serializer.save(uuid=user_instance)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
@@ -68,7 +73,6 @@ class ImageGenerateView(APIView):
         prompt_instance = None
 
         if uuid_str:
-            # <<< 수정: .get() 대신 .get_or_create()를 사용하여 신규 유저를 자동 생성합니다.
             user_instance, created = User.objects.get_or_create(
                 uuid=uuid_str,
                 defaults={'nickname': f'user_{uuid_str[:8]}'}
@@ -125,7 +129,6 @@ class ImageGenerateView(APIView):
             error_details = response.text if response else str(e)
             return Response({"error": f"API call failed: {error_details}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        # <<< 수정: 모델의 필드명인 'uuid'를 사용합니다. ('user' -> 'uuid')
         generated_image_instance = GeneratedImage.objects.create(
             uuid=user_instance,
             uploaded_image=uploaded_image_instance,
@@ -142,11 +145,11 @@ class ImageGenerateView(APIView):
 class UploadedImageListView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request, *args, **kwargs):
-        uuid_str = request.query_params.get('uuid')
+    def post(self, request, *args, **kwargs):
+        uuid_str = request.data.get('uuid')
 
         if not uuid_str:
-            return Response({"error": "uuid query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "uuid is required in the request body."}, status=status.HTTP_400_BAD_REQUEST)
 
         uploaded_images = UploadedImage.objects.filter(uuid__uuid=uuid_str).order_by('-uploaded_at')
 
@@ -156,16 +159,48 @@ class UploadedImageListView(APIView):
 class GeneratedImageListView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request, *args, **kwargs):
-        uuid_str = request.query_params.get('uuid')
+    def post(self, request, *args, **kwargs):
+        uuid_str = request.data.get('uuid')
 
         if not uuid_str:
-            return Response({"error": "uuid query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "uuid is required in the request body."}, status=status.HTTP_400_BAD_REQUEST)
 
         generated_images = GeneratedImage.objects.filter(uuid__uuid=uuid_str).order_by('-generated_at')
 
         serializer = GeneratedImageSerializer(generated_images, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class UploadedImageDetailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk, *args, **kwargs):
+        """업로드된 이미지 상세 정보 조회"""
+        uploaded_image = get_object_or_404(UploadedImage, pk=pk)
+        serializer = UploadedImageSerializer(uploaded_image)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, pk, *args, **kwargs):
+        """업로드된 이미지 삭제"""
+        uploaded_image = get_object_or_404(UploadedImage, pk=pk)
+
+        # 1. 온보딩 유저의 이미지인 경우 (소유자가 없음)
+        if uploaded_image.uuid is None:
+            uploaded_image.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        # 2. 로그인 유저의 이미지인 경우 (소유자 확인)
+        else:
+            request_uuid = request.data.get('uuid')
+
+            if not request_uuid:
+                return Response({"error": "UUID is required for deletion."}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # 요청자의 uuid와 이미지 소유자의 uuid가 같은지 확인
+            if str(uploaded_image.uuid.uuid) == request_uuid:
+                uploaded_image.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "You do not have permission to delete this image."}, status=status.HTTP_403_FORBIDDEN)
 
 class GeneratedImageDetailView(APIView):
     permission_classes = [permissions.AllowAny]

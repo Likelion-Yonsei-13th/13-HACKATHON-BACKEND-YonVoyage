@@ -17,11 +17,18 @@ from user.models import User
 
 from django.shortcuts import get_object_or_404
 
+from django.core.files.storage import default_storage
+
 class ImageUploadView(APIView):
     permission_classes = [permissions.AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
+
+        print("--- DEBUG START ---")
+        print(f"현재 적용된 파일 스토리지: {settings.DEFAULT_FILE_STORAGE}")
+        print(f"현재 사용되는 스토리지 클래스: {default_storage.__class__}")
+        print("--- DEBUG END ---")
         uuid_str = request.data.get('uuid')
         user_instance = None
 

@@ -49,7 +49,24 @@ INSTALLED_APPS = [
     'user',
     'feed',
     'studio',
+    'storages',
 ]
+
+# --- AWS S3 Media Storage Settings ---
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME')
+
+# S3를 통해 미디어 파일을 제공할 때 사용할 URL 형식
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+
+# Django의 기본 파일 저장소를 S3로 변경
+# 이제 모든 ImageField, FileField는 자동으로 S3에 파일을 저장합니다.
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# --- 미디어 파일(사용자 업로드 파일) 설정 ---
+MEDIA_URL = '/media/'
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -93,11 +110,11 @@ WSGI_APPLICATION = "pixpl.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pixpl_db',          # DB 이름
-        'USER': 'root',  # MySQL 아이디
-        'PASSWORD': config('DB_PASSWORD'),  # MySQL 비밀번호
-        'HOST': 'localhost',            # RDS나 다른 서버면 IP
-        'PORT': '3306',                 # MySQL 기본 포트
+        'NAME': config('DB_NAME'),          
+        'USER': config('DB_USER'),       
+        'PASSWORD': config('DB_PASSWORD'), 
+        'HOST': config('DB_HOST'),        
+        'PORT': config('DB_PORT'),          
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET NAMES 'utf8mb4'"
@@ -147,7 +164,3 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# --- 미디어 파일(사용자 업로드 파일) 설정 ---
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# -----------------------------------------

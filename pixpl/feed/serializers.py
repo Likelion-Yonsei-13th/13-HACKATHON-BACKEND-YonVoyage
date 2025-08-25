@@ -27,7 +27,7 @@ class FeedDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'uuid', 'nickname', 'business_type',
             'generated_image_id', 'image_url', 'before_image_url',
-            'prompt', 'user_tag', 'picked', 'pick_count', 'created_at','is_mine'
+            'prompt', 'user_tag', 'picked', 'pick_count', 'created_at', 'is_mine'
         ]
 
     def get_uuid(self, obj):
@@ -36,16 +36,30 @@ class FeedDetailSerializer(serializers.ModelSerializer):
     def get_nickname(self, obj):
         return obj.uuid.nickname
 
-    def get_image_url(self, obj):
+    def _build_image_url(self, img_field):
+        """ImageField에서 안전하게 URL 반환"""
         request = self.context.get('request')
-        if obj.generated_image and obj.generated_image.generated_image:
-            return request.build_absolute_uri(obj.generated_image.generated_image.url) if request else obj.generated_image.generated_image.url
+        if img_field:
+            try:
+                # FileField인지 체크
+                url = img_field.url if hasattr(img_field, 'url') else str(img_field)
+                # request가 있으면 절대 URL
+                if request:
+                    return request.build_absolute_uri(url)
+                return url
+            except ValueError:
+                # 파일이 존재하지 않으면 None
+                return None
+        return None
+
+    def get_image_url(self, obj):
+        if obj.generated_image:
+            return self._build_image_url(obj.generated_image.generated_image)
         return None
 
     def get_before_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.uploaded_image and obj.uploaded_image.image:
-            return request.build_absolute_uri(obj.uploaded_image.image.url) if request else obj.uploaded_image.image.url
+        if obj.uploaded_image:
+            return self._build_image_url(obj.uploaded_image.image)
         return None
 
     def get_prompt(self, obj):

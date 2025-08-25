@@ -32,7 +32,7 @@ class FeedView(APIView):
             except GeneratedImage.DoesNotExist:
                 return Response({'error': '이미지가 존재하지 않습니다.'}, status=status.HTTP_404_NOT_FOUND)
             
-            if generated_image.user != user:
+            if generated_image.uuid != user:
                 return Response({'error': '피드 생성 권한이 없습니다.'}, status=status.HTTP_403_FORBIDDEN)
             
             if Feed.objects.filter(generated_image=generated_image).exists():
@@ -62,8 +62,8 @@ class FeedView(APIView):
             'business_type': business_type,
             'generated_image_id': generated_image.id,
             'uploaded_image_id': uploaded_image.id,
-            'image_url': generated_image.image_url,      
-            'before_image_url': uploaded_image.image_url,  
+            'image_url': request.build_absolute_uri(generated_image.generated_image.url),
+            'before_image_url': request.build_absolute_uri(uploaded_image.image.url), 
             'prompt': prompt.content_ko if prompt else None,   
             'user_tag': feed.user_tag,
             'created_at': feed.created_at.isoformat()
@@ -119,7 +119,7 @@ class FeedView(APIView):
                 "uuid": str(feed.uuid.uuid), 
                 "business_type": feed.business_type,
                 "generated_image_id": feed.generated_image.id,
-                "image_url": feed.generated_image.image_url,
+                "image_url": feed.generated_image.generated_image,
                 "picked": picked,
                 "created_at": feed.created_at.isoformat()
             })

@@ -31,7 +31,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
+
+
 
 
 # Application definition
@@ -93,11 +95,11 @@ WSGI_APPLICATION = "pixpl.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pixpl_db',          # DB 이름
-        'USER': 'root',  # MySQL 아이디
+        'NAME': config('DB_NAME'),          # DB 이름
+        'USER': config('DB_USER'),  # MySQL 아이디
         'PASSWORD': config('DB_PASSWORD'),  # MySQL 비밀번호
-        'HOST': 'localhost',            # RDS나 다른 서버면 IP
-        'PORT': '3306',                 # MySQL 기본 포트
+        'HOST': config('DB_HOST'),            # RDS나 다른 서버면 IP
+        'PORT': config('DB_PORT'),                 # MySQL 기본 포트
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET NAMES 'utf8mb4'"
@@ -140,7 +142,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

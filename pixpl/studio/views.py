@@ -3,7 +3,7 @@ import uuid
 import base64
 import os
 import goslate
-
+import random
 from django.conf import settings
 from django.core.files.base import ContentFile
 from rest_framework.views import APIView
@@ -14,10 +14,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import UploadedImage, GeneratedImage, Prompt
 from .serializers import UploadedImageSerializer, GeneratedImageSerializer
 from user.models import User
-
+from storages.backends.s3boto3 import S3Boto3Storage
 from django.shortcuts import get_object_or_404
 
-from django.core.files.storage import default_storage
 
 class ImageUploadView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -32,13 +31,27 @@ class ImageUploadView(APIView):
                 uuid=uuid_str,
                 defaults={'nickname': f'user_{uuid_str[:8]}'}
             )
+        s3_storage = S3Boto3Storage()
+        uploaded_file = request.FILES.get('image')
+        if not uploaded_file:
+            return Response({"error": "No image file uploaded."}, status=400)
         
-        serializer = UploadedImageSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(uuid=user_instance)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        nickname = user_instance.nickname if user_instance else "guest"
+        random_number = random.randint(1000, 9999)
+        extension = os.path.splitext(uploaded_file.name)[1]
+
+        filename = f"uploaded_images/{nickname}_{random_number}{extension}"
+        saved_path = s3_storage.save(filename, uploaded_file)
+
+        uploaded_image_instance = UploadedImage.objects.create(
+            uuid=user_instance,
+            image=saved_path
+        )
+
+        serializer = UploadedImageSerializer(uploaded_image_instance)
+        data = serializer.data
+        return Response(data, status=201)
+
 
 class ImageGenerateView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -111,18 +124,18 @@ class ImageGenerateView(APIView):
             "accept": "image/*"
         }
 
+        s3_storage = S3Boto3Storage()
         try:
-            with uploaded_image_instance.image.open('rb') as image_file:
+            with s3_storage.open(uploaded_image_instance.image.name, 'rb') as image_file:
                 files = {"image": image_file}
                 data = {"prompt": prompt_to_use, "output_format": "png"}
                 response = requests.post(api_url, headers=headers, files=files, data=data)
                 response.raise_for_status()
-            
             image_data = response.content
-            
         except requests.exceptions.RequestException as e:
             error_details = response.text if response else str(e)
             return Response({"error": f"API call failed: {error_details}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
         generated_image_instance = GeneratedImage.objects.create(
             uuid=user_instance,
@@ -130,11 +143,19 @@ class ImageGenerateView(APIView):
             prompt=prompt_instance 
         )
         
-        filename = f"{uuid.uuid4()}.png"
-        generated_image_instance.generated_image.save(filename, ContentFile(image_data))
+        # 닉네임 + 랜덤 숫자로 저장
+        random_number = random.randint(1000, 9999)
+        nickname = user_instance.nickname if user_instance else "guest"
+        filename = f"generated_images/{nickname}_{random_number}.png"
+        saved_path = s3_storage.save(filename, ContentFile(image_data))
+
+        generated_image_instance.generated_image = saved_path
+        generated_image_instance.save()
 
         serializer = GeneratedImageSerializer(generated_image_instance)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        data = serializer.data
+        return Response(data, status=201)
+
     
 
 class UploadedImageListView(APIView):
@@ -147,10 +168,11 @@ class UploadedImageListView(APIView):
             return Response({"error": "uuid is required in the request body."}, status=status.HTTP_400_BAD_REQUEST)
 
         uploaded_images = UploadedImage.objects.filter(uuid__uuid=uuid_str).order_by('-uploaded_at')
-
         serializer = UploadedImageSerializer(uploaded_images, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        data = serializer.data
+        return Response(data, status=status.HTTP_200_OK)
+
+
 class GeneratedImageListView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -161,41 +183,20 @@ class GeneratedImageListView(APIView):
             return Response({"error": "uuid is required in the request body."}, status=status.HTTP_400_BAD_REQUEST)
 
         generated_images = GeneratedImage.objects.filter(uuid__uuid=uuid_str).order_by('-generated_at')
-
         serializer = GeneratedImageSerializer(generated_images, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+        data = serializer.data
+        return Response(data, status=status.HTTP_200_OK)
+
+
 class UploadedImageDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, pk, *args, **kwargs):
-        """업로드된 이미지 상세 정보 조회"""
         uploaded_image = get_object_or_404(UploadedImage, pk=pk)
         serializer = UploadedImageSerializer(uploaded_image)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    def delete(self, request, pk, *args, **kwargs):
-        """업로드된 이미지 삭제"""
-        uploaded_image = get_object_or_404(UploadedImage, pk=pk)
+        data = serializer.data
+        return Response(data, status=status.HTTP_200_OK)
 
-        # 1. 온보딩 유저의 이미지인 경우 (소유자가 없음)
-        if uploaded_image.uuid is None:
-            uploaded_image.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        
-        # 2. 로그인 유저의 이미지인 경우 (소유자 확인)
-        else:
-            request_uuid = request.data.get('uuid')
-
-            if not request_uuid:
-                return Response({"error": "UUID is required for deletion."}, status=status.HTTP_401_UNAUTHORIZED)
-            
-            # 요청자의 uuid와 이미지 소유자의 uuid가 같은지 확인
-            if str(uploaded_image.uuid.uuid) == request_uuid:
-                uploaded_image.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            else:
-                return Response({"error": "You do not have permission to delete this image."}, status=status.HTTP_403_FORBIDDEN)
 
 class GeneratedImageDetailView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -203,22 +204,5 @@ class GeneratedImageDetailView(APIView):
     def get(self, request, pk, *args, **kwargs):
         generated_image = get_object_or_404(GeneratedImage, pk=pk)
         serializer = GeneratedImageSerializer(generated_image)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    def delete(self, request, pk, *args, **kwargs):
-        generated_image = get_object_or_404(GeneratedImage, pk=pk)
-
-        if generated_image.uuid is None:
-            generated_image.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            request_uuid = request.data.get('uuid')
-
-            if not request_uuid:
-                return Response({"error": "UUID is required for deletion."}, status=status.HTTP_401_UNAUTHORIZED)
-            
-            if str(generated_image.uuid.uuid) == request_uuid:
-                generated_image.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            else:
-                return Response({"error": "You do not have permission to delete this image."}, status=status.HTTP_403_FORBIDDEN)
+        data = serializer.data
+        return Response(data, status=status.HTTP_200_OK)

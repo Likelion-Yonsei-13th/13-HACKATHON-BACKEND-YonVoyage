@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import *
-from studio.models import *
+from .models import Feed, Pick
+from studio.models import GeneratedImage
 from user.models import User
 
 class FeedCreateSerializer(serializers.Serializer):
@@ -36,19 +36,16 @@ class FeedDetailSerializer(serializers.ModelSerializer):
     def get_nickname(self, obj):
         return obj.uuid.nickname
 
-    # === 수정된 부분 ===
+    # S3 URL 반환
     def get_image_url(self, obj):
-        if obj.generated_image:
-            # S3 URL 그대로 반환
-            return str(obj.generated_image.generated_image)
+        if obj.generated_image and obj.generated_image.generated_image:
+            return obj.generated_image.generated_image.url
         return None
 
     def get_before_image_url(self, obj):
-        if obj.uploaded_image:
-            # S3 URL 그대로 반환
-            return str(obj.uploaded_image.image)
+        if obj.uploaded_image and obj.uploaded_image.image:
+            return obj.uploaded_image.image.url
         return None
-    # =================
 
     def get_prompt(self, obj):
         return obj.prompt.content_ko if obj.prompt else None
@@ -67,7 +64,6 @@ class FeedDetailSerializer(serializers.ModelSerializer):
         if not user:
             return False
         return obj.uuid == user
-
 
 class PickToggleSerializer(serializers.Serializer):
     feed_id = serializers.IntegerField()

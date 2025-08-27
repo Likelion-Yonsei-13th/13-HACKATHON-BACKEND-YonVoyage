@@ -10,15 +10,12 @@ import os
 
 # --- .env 파일에서 설정값 불러오기 ---
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = config("DEBUG", default=False, cast=bool)
+DEBUG = config("DEBUG", cast=bool)
 API_KEY = config('API_KEY')
 # ------------------------------------
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Quick-start development settings - unsuitable for production
-DEBUG = True
 ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
 
 # Application definition
@@ -32,6 +29,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
+    'storages',
     'user',
     'feed',
     'studio',
@@ -104,6 +102,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -112,3 +111,27 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # 로컬 저장을 위해 MEDIA_ROOT 설정을 복원합니다.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# HTTPS 보안 설정
+SECURE_SSL_REDIRECT = False  # HTTP 요청을 HTTPS로 리디렉트하는 것은 Nginx에서 이미 처리하므로 따로 진행하지 않음
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Proxy 사용 시 HTTPS 유지
+CSRF_COOKIE_SECURE = True  # CSRF 쿠키를 HTTPS에서만 사용
+SESSION_COOKIE_SECURE = True  # 세션 쿠키를 HTTPS에서만 사용
+
+# 신뢰할 수 있는 도메인 설정
+CSRF_TRUSTED_ORIGINS = [
+    "https://www.pixpl.com",
+    "https://pixpl.com",
+]
+
+# --- AWS S3 설정 ---
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME")
+AWS_S3_CUSTOM_DOMAIN = config("AWS_S3_CUSTOM_DOMAIN")
+
+
+# media 파일을 S3로 연결
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
